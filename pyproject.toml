@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "medicalqa-llm-finetuning"
+version = "0.1.0"
+description = "Production-ready preparation, fine-tuning, and evaluation tools for medical QA LLM datasets."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "accelerate",
+    "bitsandbytes; platform_system != 'Darwin'",
+    "datasets",
+    "matplotlib",
+    "numpy",
+    "pandas",
+    "peft",
+    "scipy",
+    "seaborn",
+    "torch",
+    "transformers",
+    "tqdm",
+    "trl",
+    "wandb",
+]
+
+[project.scripts]
+medicalqa = "medicalqa_finetuning.commands:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]

@@ -1,0 +1,14 @@
+datasets
+pandas
+matplotlib
+seaborn
+numpy
+tqdm
+accelerate
+bitsandbytes; platform_system != "Darwin"
+peft
+scipy
+torch
+transformers
+trl
+wandb

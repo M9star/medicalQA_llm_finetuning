@@ -1,0 +1,13 @@
+__pycache__/
+*.py[cod]
+.DS_Store
+.env
+.venv/
+venv/
+prepared_data/
+medical_llm_finetuned/
+pubmedqa_llm_finetuned/
+medical_llm_merged/
+evaluation_results.csv
+pubmedqa_evaluation_results.csv
+*.log

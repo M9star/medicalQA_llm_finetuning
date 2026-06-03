@@ -25,6 +25,11 @@ def build_parser() -> argparse.ArgumentParser:
     analyze = subparsers.add_parser("analyze", help="Print lightweight raw dataset statistics.")
     analyze.add_argument("--dataset", choices=["medmcqa", "pubmedqa"], default="medmcqa")
 
+    visualize = subparsers.add_parser("visualize", help="Save exploratory plots for prepared datasets.")
+    visualize.add_argument("--dataset", choices=["all", "medmcqa", "pubmedqa"], default="all")
+    visualize.add_argument("--prepared-data-dir", type=Path, default=DatasetConfig().output_dir)
+    visualize.add_argument("--output-dir", type=Path, default=Path("plots"))
+
     device_parser = subparsers.add_parser("check-device", help="Show whether CUDA, MPS, or CPU will be used.")
     device_parser.add_argument("--device", choices=["auto", "cuda", "mps", "cpu"], default="auto")
     device_parser.add_argument("--quantization", choices=["auto", "4bit", "none"], default="auto")
@@ -73,6 +78,13 @@ def main(argv: list[str] | None = None) -> None:
 
     if args.command == "analyze":
         _run_analysis(args.dataset)
+        return
+
+    if args.command == "visualize":
+        from .visualize import visualize_datasets
+
+        selected = ("medmcqa", "pubmedqa") if args.dataset == "all" else (args.dataset,)
+        visualize_datasets(selected, args.prepared_data_dir, args.output_dir)
         return
 
     if args.command == "check-device":

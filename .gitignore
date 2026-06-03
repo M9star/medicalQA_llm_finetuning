@@ -5,6 +5,7 @@ __pycache__/
 .venv/
 venv/
 prepared_data/
+plots/
 medical_llm_finetuned/
 pubmedqa_llm_finetuned/
 medical_llm_merged/

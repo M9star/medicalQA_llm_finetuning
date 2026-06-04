@@ -307,7 +307,7 @@ def create_app(
 # HTML Quiz UI
 # ---------------------------------------------------------------------------
 
-_HTML_UI = """<!DOCTYPE html>
+_HTML_UI = r"""<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
@@ -391,12 +391,20 @@ async function loadQuestion() {
   document.getElementById('qcard').className = 'loading-card';
 
   try {
-    const res = await fetch('/question?task=' + task);
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 8000);
+    const res = await fetch('/question?task=' + task + '&_=' + Date.now(),
+                            {cache: 'no-store', signal: ctrl.signal});
+    clearTimeout(timer);
     if (!res.ok) throw new Error(await res.text());
     _current = await res.json();
     renderQuestion(_current);
   } catch(e) {
-    document.getElementById('qcard').innerHTML = '<div class="loading-card" style="color:#fc8181">Failed to load question: ' + e.message + '</div>';
+    const msg = e.name === 'AbortError'
+      ? 'Connection timed out (stale connection). Click Next Question to retry.'
+      : 'Failed to load: ' + e.message;
+    document.getElementById('qcard').innerHTML =
+      '<div class="loading-card" style="color:#fc8181">' + msg + '</div>';
   }
   document.getElementById('btnNext').disabled = false;
 }

@@ -47,13 +47,14 @@ def extract_pubmedqa_answer(response: str) -> str | None:
         return "no"
     if response_lower.startswith("maybe"):
         return "maybe"
-    first_part = response_lower[:100]
-    if "yes." in first_part or "yes," in first_part or "yes " in first_part:
-        return "yes"
-    if "no." in first_part or "no," in first_part or "no " in first_part:
-        return "no"
-    if "maybe" in first_part:
-        return "maybe"
+    # search full response for answer keywords
+    for pattern, answer in [
+        (r"\byes[.,\s]", "yes"),
+        (r"\bno[.,\s]", "no"),
+        (r"\bmaybe[.,\s]?", "maybe"),
+    ]:
+        if re.search(pattern, response_lower):
+            return answer
     return None
 
 

@@ -30,6 +30,7 @@ def build_parser() -> argparse.ArgumentParser:
     serve_parser.add_argument("--adapter-path", type=Path, default=None)
     serve_parser.add_argument("--device", choices=["auto", "cuda", "mps", "cpu"], default="auto")
     serve_parser.add_argument("--quantization", choices=["auto", "4bit", "none"], default="auto")
+    serve_parser.add_argument("--prepared-data-dir", type=Path, default=DatasetConfig().output_dir)
     serve_parser.add_argument("--host", default="0.0.0.0")
     serve_parser.add_argument("--port", type=int, default=8000)
 
@@ -78,6 +79,7 @@ def main(argv: list[str] | None = None) -> None:
             adapter_path=args.adapter_path,
             device=args.device,
             quantization=args.quantization,
+            prepared_data_dir=args.prepared_data_dir,
         )
         uvicorn.run(app, host=args.host, port=args.port)
         return

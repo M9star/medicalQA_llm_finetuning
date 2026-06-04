@@ -25,6 +25,14 @@ def build_parser() -> argparse.ArgumentParser:
     analyze = subparsers.add_parser("analyze", help="Print lightweight raw dataset statistics.")
     analyze.add_argument("--dataset", choices=["medmcqa", "pubmedqa"], default="medmcqa")
 
+    serve_parser = subparsers.add_parser("serve", help="Run the FastAPI inference server.")
+    serve_parser.add_argument("--model-id", default=TrainingConfig().model_id)
+    serve_parser.add_argument("--adapter-path", type=Path, default=None)
+    serve_parser.add_argument("--device", choices=["auto", "cuda", "mps", "cpu"], default="auto")
+    serve_parser.add_argument("--quantization", choices=["auto", "4bit", "none"], default="auto")
+    serve_parser.add_argument("--host", default="0.0.0.0")
+    serve_parser.add_argument("--port", type=int, default=8000)
+
     visualize = subparsers.add_parser("visualize", help="Save exploratory plots for prepared datasets.")
     visualize.add_argument("--dataset", choices=["all", "medmcqa", "pubmedqa"], default="all")
     visualize.add_argument("--prepared-data-dir", type=Path, default=DatasetConfig().output_dir)
@@ -60,6 +68,19 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv: list[str] | None = None) -> None:
     args = build_parser().parse_args(argv)
     setup_logging(args.log_level)
+
+    if args.command == "serve":
+        import uvicorn
+        from .api import create_app
+
+        app = create_app(
+            model_id=args.model_id,
+            adapter_path=args.adapter_path,
+            device=args.device,
+            quantization=args.quantization,
+        )
+        uvicorn.run(app, host=args.host, port=args.port)
+        return
 
     if args.command == "prepare":
         from .data import prepare_datasets

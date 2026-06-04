@@ -23,6 +23,8 @@ dependencies = [
     "tqdm",
     "trl",
     "wandb",
+    "fastapi",
+    "uvicorn[standard]",
 ]
 
 [project.scripts]

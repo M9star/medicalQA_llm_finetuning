@@ -79,7 +79,6 @@ def main(argv: list[str] | None = None) -> None:
             adapter_path=args.adapter_path,
             device=args.device,
             quantization=args.quantization,
-            prepared_data_dir=args.prepared_data_dir,
         )
         uvicorn.run(app, host=args.host, port=args.port)
         return

@@ -12,3 +12,9 @@ medical_llm_merged/
 evaluation_results.csv
 pubmedqa_evaluation_results.csv
 *.log
+
+# Experiment artifacts: ignore heavy model weights and training checkpoints,
+# but keep the lightweight results (CSV / JSON / Markdown) tracked.
+experiments/**/final_adapter/
+experiments/**/checkpoint-*/
+experiments/**/runs/

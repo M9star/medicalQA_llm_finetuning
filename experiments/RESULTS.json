@@ -1,0 +1,26 @@
+{
+  "generated_at": "2026-06-06T07:06:46",
+  "model_id": "unsloth/Llama-3.2-1B",
+  "max_steps": 200,
+  "num_samples": 50,
+  "datasets": [
+    {
+      "dataset": "pubmedqa",
+      "random_baseline_pct": 33.3,
+      "base": {
+        "total": 50,
+        "correct": 13,
+        "accuracy_pct": 26.0
+      },
+      "finetuned": {
+        "total": 50,
+        "correct": 32,
+        "accuracy_pct": 64.0
+      },
+      "improvement_pct": 38.0,
+      "adapter_path": "experiments/pubmedqa/final_adapter",
+      "base_eval_csv": "experiments/pubmedqa/base_eval.csv",
+      "finetuned_eval_csv": "experiments/pubmedqa/finetuned_eval.csv"
+    }
+  ]
+}

@@ -193,21 +193,33 @@ the exact interface end users see.
 
 ---
 
-## 8b. Training on a GPU (Google Colab)
+## 8b. Training on a GPU (Google Colab) — required
 
-Apple MPS thermal-throttles under sustained load, so PubMedQA is trained on a
-free Colab GPU instead. On CUDA the code automatically uses **4-bit QLoRA**.
+> **Important: do not fine-tune on Apple MPS.** Local MPS training diverges to
+> **NaN weights** (the model is loaded in fp16 but MPS has no bf16 and HF
+> mixed-precision loss scaling isn't applied). Symptom: the fine-tuned model
+> emits `!!!!!!!` and accuracy collapses to 0%. Confirmed on MedMCQA:
+> base = 28%, local MPS fine-tune = 0% (broken). MPS is also severely
+> thermal-throttled (~45s/step → ~360s/step). **Train on a CUDA GPU instead**,
+> where the project auto-uses stable **4-bit QLoRA**.
 
 Run this in a **single Colab cell** (Runtime → Change runtime type → GPU first):
 
 ```bash
-!curl -sSL https://raw.githubusercontent.com/M9star/medicalQA_llm_finetuning/main/scripts/colab_pubmedqa.sh | bash
+# Both datasets
+!curl -sSL https://raw.githubusercontent.com/M9star/medicalQA_llm_finetuning/main/scripts/colab_train.sh | bash
+
+# One dataset only
+!curl -sSL .../scripts/colab_train.sh | DATASETS=medmcqa bash
 ```
 
-`scripts/colab_pubmedqa.sh` clones the repo, installs deps, prepares PubMedQA,
-runs base eval → fine-tune → fine-tuned eval, and zips the adapter +
+`scripts/colab_train.sh` clones the repo, installs deps, prepares the data, runs
+base eval → fine-tune → fine-tuned eval per dataset, and zips the adapters +
 comparison for download. Nothing runs on your local machine. After downloading,
-unzip into `experiments/pubmedqa/final_adapter/` and serve as in section 8.
+unzip `experiments/` into the project and serve as in section 8.
+
+> MPS is still perfectly fine for **inference / the quiz** and for **base-model
+> evaluation** — just not for training.
 
 ---
 

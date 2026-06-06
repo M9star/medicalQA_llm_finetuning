@@ -221,6 +221,30 @@ unzip `experiments/` into the project and serve as in section 8.
 > MPS is still perfectly fine for **inference / the quiz** and for **base-model
 > evaluation** — just not for training.
 
+### Resuming an interrupted run
+
+Training saves a `checkpoint-<N>/` every 50 steps (with optimizer, scheduler,
+RNG, and step state). If a run is interrupted, download/keep that checkpoint
+folder and continue later with `--resume`, which picks up from the latest
+checkpoint in the output dir instead of restarting from step 0.
+
+On Colab, after copying the checkpoint zip into the session (from Drive or
+`files.upload()`):
+
+```bash
+!curl -sSL https://raw.githubusercontent.com/M9star/medicalQA_llm_finetuning/main/scripts/colab_resume.sh | bash
+```
+
+`scripts/colab_resume.sh` restores the `checkpoint-<N>/` into
+`experiments/<dataset>/`, then runs `run_experiment.py --resume` to finish
+training and evaluate. Override the source zip / dataset via env vars, e.g.
+`CKPT_ZIP=/content/my.zip DATASET=medmcqa`.
+
+> Resume requires the **full** `checkpoint-<N>/` folder (optimizer.pt,
+> scheduler.pt, rng_state.pth, trainer_state.json + adapter files) — the adapter
+> weights alone cannot resume. Data prep is deterministic (seed 42), so the
+> training set reproduces exactly across sessions.
+
 ---
 
 ## 9. Reproducing from scratch

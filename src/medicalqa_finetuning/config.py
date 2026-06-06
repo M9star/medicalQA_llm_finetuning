@@ -58,6 +58,7 @@ class TrainingConfig:
         )
     )
     report_to: str = "none"
+    resume: bool = False
 
 
 @dataclass(frozen=True)

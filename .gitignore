@@ -18,3 +18,5 @@ pubmedqa_evaluation_results.csv
 experiments/**/final_adapter/
 experiments/**/checkpoint-*/
 experiments/**/runs/
+experiments/**/*.zip
+experiments/**/content/

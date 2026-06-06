@@ -69,9 +69,33 @@ def train(config: TrainingConfig):
         len(dataset["validation"]),
         config.max_steps,
     )
-    result = trainer.train()
+    resume_checkpoint = _latest_checkpoint(config.output_dir) if config.resume else None
+    if config.resume:
+        if resume_checkpoint:
+            logger.info("Resuming training from checkpoint: %s", resume_checkpoint)
+        else:
+            logger.warning("--resume set but no checkpoint found in %s; training from scratch.", config.output_dir)
+    result = trainer.train(resume_from_checkpoint=resume_checkpoint)
     adapter_path = config.output_dir / "final_adapter"
     model.save_pretrained(str(adapter_path))
     tokenizer.save_pretrained(str(adapter_path))
     logger.info("Saved LoRA adapter to %s", adapter_path)
     return result
+
+
+def _latest_checkpoint(output_dir) -> str | None:
+    """Return the path to the highest-numbered checkpoint-* dir, or None."""
+
+    from pathlib import Path
+
+    output_dir = Path(output_dir)
+    if not output_dir.exists():
+        return None
+    checkpoints = [
+        p for p in output_dir.glob("checkpoint-*")
+        if p.is_dir() and p.name.split("-")[-1].isdigit()
+    ]
+    if not checkpoints:
+        return None
+    latest = max(checkpoints, key=lambda p: int(p.name.split("-")[-1]))
+    return str(latest)

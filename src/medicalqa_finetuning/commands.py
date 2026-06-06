@@ -52,6 +52,7 @@ def build_parser() -> argparse.ArgumentParser:
     train_parser.add_argument("--max-steps", type=int, default=TrainingConfig().max_steps)
     train_parser.add_argument("--batch-size", type=int, default=TrainingConfig().batch_size)
     train_parser.add_argument("--learning-rate", type=float, default=TrainingConfig().learning_rate)
+    train_parser.add_argument("--resume", action="store_true", help="Resume from the latest checkpoint in output-dir.")
 
     eval_parser = subparsers.add_parser("evaluate", help="Evaluate a base model or adapter.")
     eval_parser.add_argument("--dataset", choices=["medmcqa", "pubmedqa"], default=EvaluationConfig().dataset)
@@ -127,6 +128,7 @@ def main(argv: list[str] | None = None) -> None:
             max_steps=args.max_steps,
             batch_size=args.batch_size,
             learning_rate=args.learning_rate,
+            resume=args.resume,
         )
         train(config)
         return

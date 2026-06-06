@@ -52,7 +52,7 @@ def accuracy_from_csv(csv_path: Path) -> dict:
     }
 
 
-def run_dataset(name: str, max_steps: int, num_samples: int) -> dict:
+def run_dataset(name: str, max_steps: int, num_samples: int, resume: bool = False) -> dict:
     """Run the full base -> train -> fine-tuned pipeline for one dataset."""
     out_dir = EXPERIMENTS_DIR / name
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -70,12 +70,15 @@ def run_dataset(name: str, max_steps: int, num_samples: int) -> dict:
     ])
 
     # 2. Fine-tune LoRA adapter
-    run([
+    train_cmd = [
         PY, str(PROJECT_ROOT / "scripts" / "train.py"),
         "--dataset-path", str(dataset_path),
         "--output-dir", str(out_dir),
         "--max-steps", str(max_steps),
-    ])
+    ]
+    if resume:
+        train_cmd.append("--resume")
+    run(train_cmd)
 
     # 3. Fine-tuned model evaluation
     run([
@@ -147,12 +150,14 @@ def main() -> None:
     parser.add_argument("--max-steps", type=int, default=200)
     parser.add_argument("--num-samples", type=int, default=50)
     parser.add_argument("--model-id", default="unsloth/Llama-3.2-1B")
+    parser.add_argument("--resume", action="store_true",
+                        help="Resume training from the latest checkpoint in each dataset's experiment dir.")
     args = parser.parse_args()
 
     dataset_results = []
     for name in args.datasets:
         print(f"\n########## EXPERIMENT: {name} ##########", flush=True)
-        dataset_results.append(run_dataset(name, args.max_steps, args.num_samples))
+        dataset_results.append(run_dataset(name, args.max_steps, args.num_samples, args.resume))
 
     results = {
         "generated_at": datetime.now().isoformat(timespec="seconds"),

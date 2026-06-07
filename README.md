@@ -1,161 +1,155 @@
 # MedicalQA LLM Fine-Tuning
 
-Production-ready utilities for preparing, fine-tuning, and evaluating instruction-tuned medical question-answering models with PubMedQA and MedMCQA.
+Prepare, fine-tune, evaluate, and serve instruction-tuned medical
+question-answering models on **PubMedQA** and **MedMCQA**, using LoRA / 4-bit
+QLoRA on top of `unsloth/Llama-3.2-1B`.
 
-The original notebook-style `main.py` has been split into a maintainable Python package with explicit command-line workflows, reusable modules, logging, configuration objects, and lightweight tests.
+The project covers the full lifecycle: data prep → analysis → visualization →
+fine-tuning (on GPU) → base-vs-fine-tuned evaluation → an interactive quiz web
+app that serves the fine-tuned models.
+
+## Results
+
+Fine-tuning lifts both tasks above their base model and random baselines, with
+<1% of parameters trained (LoRA, 200 steps, 4-bit QLoRA on GPU):
+
+| Dataset | Random | Base | Fine-tuned | Improvement |
+|---------|-------:|-----:|-----------:|------------:|
+| PubMedQA | 33.3% | 26% | **64%** | **+38%** |
+| MedMCQA | 25% | 26% | **32%** | **+6%** |
+
+![Base vs fine-tuned accuracy](experiments/comparison.png)
+
+Details: [`docs/RESULTS.md`](docs/RESULTS.md) · [`docs/FINETUNING.md`](docs/FINETUNING.md)
 
 ## Features
 
-- Load PubMedQA and MedMCQA from Hugging Face datasets
-- Convert examples to Alpaca instruction format
-- Run dataset quality checks and basic analysis
-- Fine-tune causal language models with CUDA QLoRA or Apple MPS LoRA and TRL `SFTTrainer`
-- Auto-detect CUDA, Apple MPS, or CPU before model loading
-- Evaluate base or adapter models on MedMCQA and PubMedQA
-- Save prepared datasets, LoRA adapters, and evaluation CSVs
+- Load PubMedQA & MedMCQA from Hugging Face and convert to Alpaca instruction format
+- Dataset quality checks, statistics, and visual plots
+- Auto-detect CUDA / Apple MPS / CPU and pick a safe precision strategy
+- Fine-tune with LoRA (MPS) or 4-bit QLoRA (CUDA) via TRL `SFTTrainer`
+- Resume interrupted training from checkpoints (`--resume`)
+- Base-vs-fine-tuned evaluation with per-question CSVs and a comparison plot
+- One-line GPU training on Google Colab
+- FastAPI **quiz web app**: dataset questions + AI explanations from the fine-tuned model
 
-## Project Structure
+## Project structure
 
 ```text
 .
 ├── README.md
-├── pyproject.toml
-├── requirements.txt
+├── pyproject.toml / requirements.txt
+├── docs/
+│   ├── FINETUNING.md          # full pipeline, GPU/Colab, resume, MPS-failure notes
+│   └── RESULTS.md             # results summary + plot
 ├── scripts/
-│   ├── check_device.py
-│   ├── evaluate.py
-│   ├── prepare_dataset.py
-│   └── train.py
-├── src/
-│   └── medicalqa_finetuning/
-│       ├── commands.py    # main command entrypoint
-│       ├── config.py      # dataclasses, logging, device resolver
-│       ├── data.py        # load/format/analyze/prepare datasets
-│       ├── train.py       # LoRA training flow
-│       ├── evaluate.py    # evaluation flow and metrics CSV
-│       ├── modeling.py    # model/tokenizer/LoRA helpers
-│       └── __init__.py
+│   ├── prepare_dataset.py     # download + format datasets
+│   ├── check_device.py        # hardware backend
+│   ├── visualize_dataset.py   # exploratory plots
+│   ├── train.py               # LoRA fine-tuning (+ --resume)
+│   ├── evaluate.py            # accuracy eval -> CSV
+│   ├── serve.py               # FastAPI quiz server
+│   ├── run_experiment.py      # base eval -> train -> fine-tuned eval -> comparison
+│   ├── aggregate_results.py   # merge per-dataset results into one table
+│   ├── plot_comparison.py     # base-vs-fine-tuned bar chart
+│   ├── colab_train.sh         # one-line GPU training on Colab
+│   └── colab_resume.sh        # resume training from a checkpoint on Colab
+├── src/medicalqa_finetuning/
+│   ├── commands.py            # unified CLI entrypoint
+│   ├── config.py              # dataclasses, logging, device resolver
+│   ├── data.py                # load/format/analyze/prepare datasets
+│   ├── modeling.py            # model/tokenizer/LoRA/generation helpers
+│   ├── train.py               # training flow
+│   ├── evaluate.py            # evaluation + answer extraction
+│   ├── visualize.py           # plotting
+│   └── api.py                 # FastAPI quiz app
+├── experiments/               # results (CSV/JSON/PNG tracked; weights gitignored)
 └── tests/
-    └── test_formatter.py
 ```
 
 ## Installation
 
-Create and activate a virtual environment, then install dependencies:
+Uses [`uv`](https://github.com/astral-sh/uv) with Python 3.12:
 
 ```bash
-python -m venv .venv
+uv venv --python 3.12 .venv
+uv pip install -r requirements.txt --python .venv/bin/python
 source .venv/bin/activate
-pip install -r requirements.txt
-pip install -e .
 ```
 
-## Usage
-
-Prepare both datasets:
+## Workflow
 
 ```bash
+# 1. Prepare datasets (Alpaca format)
 python scripts/prepare_dataset.py
-```
 
-Prepare only PubMedQA with custom split sizes:
-
-```bash
-python scripts/prepare_dataset.py --dataset pubmedqa --pubmedqa-train-size 800 --pubmedqa-validation-size 100
-```
-
-Check whether training will use CUDA, MPS, or CPU:
-
-```bash
+# 2. Inspect hardware + data
 python scripts/check_device.py
+python scripts/visualize_dataset.py          # plots/ -> answer dist, lengths, subjects
+
+# 3. Fine-tune + compare (base vs fine-tuned). Use a GPU — see note below.
+python scripts/run_experiment.py --datasets medmcqa pubmedqa --max-steps 200
+
+# 4. Regenerate the comparison plot from results
+python scripts/plot_comparison.py
+
+# 5. Serve the quiz with a fine-tuned adapter
+python scripts/serve.py --adapter-path experiments/pubmedqa/final_adapter
 ```
 
-Run exploratory analysis without preparing artifacts:
+Then open **http://127.0.0.1:8000** — pick a task, answer a question, and click
+**Get AI Explanation** to see the fine-tuned model explain the answer.
+
+## ⚠️ Train on GPU, not Apple MPS
+
+Fine-tuning on Apple MPS **diverges to NaN weights** (fp16 instability — the
+model ends up emitting `!!!!!!!` and scores 0%). MPS is fine for the quiz and
+base-model evaluation, **but not for training.** Train on a CUDA GPU instead,
+where the project auto-uses stable 4-bit QLoRA.
+
+The easy path is **Google Colab's free GPU** — run in one cell
+(Runtime → Change runtime type → GPU):
 
 ```bash
-medicalqa analyze --dataset medmcqa
+# both datasets
+!curl -sSL https://raw.githubusercontent.com/M9star/medicalQA_llm_finetuning/main/scripts/colab_train.sh | bash
 ```
 
-Train a LoRA adapter on the prepared MedMCQA dataset:
+See [`docs/FINETUNING.md`](docs/FINETUNING.md) for resuming interrupted runs and
+moving adapters back to your machine.
 
-```bash
-python scripts/train.py \
-  --model-id unsloth/Llama-3.2-1B \
-  --dataset-path prepared_data/medmcqa_alpaca \
-  --output-dir medical_llm_finetuned \
-  --max-steps 10
-```
-
-Evaluate an adapter:
-
-```bash
-python scripts/evaluate.py \
-  --dataset medmcqa \
-  --model-id unsloth/Llama-3.2-1B \
-  --adapter-path medical_llm_finetuned/final_adapter \
-  --num-samples 50 \
-  --output-csv evaluation_results.csv
-```
-
-After `pip install -e .`, use the package command:
+## CLI (after `uv pip install -e .`)
 
 ```bash
 medicalqa prepare --dataset all
+medicalqa analyze --dataset medmcqa
+medicalqa visualize
 medicalqa check-device
-medicalqa train --max-steps 10
-medicalqa evaluate --dataset pubmedqa --adapter-path pubmedqa_llm_finetuned/final_adapter
-```
-
-## Device Support
-
-The project uses `src/medicalqa_finetuning/config.py` to select the safest training mode:
-
-- CUDA: uses 4-bit QLoRA by default with bitsandbytes.
-- Apple MPS: uses regular LoRA on MPS because bitsandbytes 4-bit is not supported there.
-- CPU: works as a slow fallback for debugging and tiny smoke tests.
-
-You can override the automatic choice:
-
-```bash
-python scripts/train.py --device cuda --quantization 4bit
-python scripts/train.py --device mps --quantization none
-python scripts/evaluate.py --device cpu --quantization none --num-samples 5
+medicalqa train --max-steps 200 --resume
+medicalqa evaluate --dataset pubmedqa --adapter-path experiments/pubmedqa/final_adapter
+medicalqa serve --adapter-path experiments/medmcqa/final_adapter
 ```
 
 ## Configuration
 
 Defaults live in `src/medicalqa_finetuning/config.py`:
+`DatasetConfig` (names, split sizes, seed), `TrainingConfig` (model, LoRA params,
+batch/lr/steps, resume), `EvaluationConfig` (dataset, adapter, samples, output CSV).
+CLI flags override the common ones.
 
-- `DatasetConfig` controls dataset names, split sizes, output paths, and seed.
-- `TrainingConfig` controls model ID, LoRA parameters, batch size, learning rate, sequence length, and checkpointing cadence.
-- `EvaluationConfig` controls dataset, adapter path, sample count, generation length, and output CSV path.
+## What is and isn't in git
 
-Command-line flags override the most common defaults.
+Tracked: all source, scripts, docs, and **lightweight results** (eval CSVs,
+`RESULTS.json`, `COMPARISON.md`, `comparison.png`).
 
-## Outputs
+Gitignored (large / reproducible): model adapter weights
+(`experiments/**/final_adapter/`), checkpoints, prepared datasets, `.venv/`,
+and downloaded base models. Adapters are reproducible via Colab; back them up
+to Google Drive if you want to keep them without retraining (see below).
 
-Generated artifacts are ignored by git:
-
-- `prepared_data/medmcqa_alpaca`
-- `prepared_data/pubmedqa_alpaca`
-- `medical_llm_finetuned/final_adapter`
-- `pubmedqa_llm_finetuned/final_adapter`
-- `evaluation_results.csv`
-
-## Development
-
-Run a syntax check:
-
-```bash
-python -m compileall src scripts tests
-```
-
-Run tests:
+## Tests
 
 ```bash
 pytest
+python -m compileall src scripts
 ```
-
-## Notes
-
-Training downloads models and datasets and requires substantial memory. CUDA is the best path for 4-bit QLoRA. Apple Silicon can run smaller LoRA jobs through MPS, but you should reduce model size, batch size, and sequence length if memory is tight. The default `--max-steps 10` is intentionally a smoke-test setting; increase it for real fine-tuning.

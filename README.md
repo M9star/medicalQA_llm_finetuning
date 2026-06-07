@@ -1,12 +1,11 @@
 # MedicalQA LLM Fine-Tuning
 
-Prepare, fine-tune, evaluate, and serve instruction-tuned medical
-question-answering models on **PubMedQA** and **MedMCQA**, using LoRA / 4-bit
-QLoRA on top of `unsloth/Llama-3.2-1B`.
-
-The project covers the full lifecycle: data prep → analysis → visualization →
-fine-tuning (on GPU) → base-vs-fine-tuned evaluation → an interactive quiz web
-app that serves the fine-tuned models.
+This project builds a **medical QA quiz** powered by fine-tuned language models.
+Questions are drawn from real medical datasets (**PubMedQA**, **MedMCQA**); you
+pick an answer, and a **fine-tuned model explains** why the correct answer is
+right. Fine-tuning with LoRA measurably improves the model over the base
+`unsloth/Llama-3.2-1B` — and the project trains, evaluates, and visualizes that
+improvement end to end.
 
 ## Results
 
@@ -32,40 +31,6 @@ Details: [`docs/RESULTS.md`](docs/RESULTS.md) · [`docs/FINETUNING.md`](docs/FIN
 - Base-vs-fine-tuned evaluation with per-question CSVs and a comparison plot
 - One-line GPU training on Google Colab
 - FastAPI **quiz web app**: dataset questions + AI explanations from the fine-tuned model
-
-## Project structure
-
-```text
-.
-├── README.md
-├── pyproject.toml / requirements.txt
-├── docs/
-│   ├── FINETUNING.md          # full pipeline, GPU/Colab, resume, MPS-failure notes
-│   └── RESULTS.md             # results summary + plot
-├── scripts/
-│   ├── prepare_dataset.py     # download + format datasets
-│   ├── check_device.py        # hardware backend
-│   ├── visualize_dataset.py   # exploratory plots
-│   ├── train.py               # LoRA fine-tuning (+ --resume)
-│   ├── evaluate.py            # accuracy eval -> CSV
-│   ├── serve.py               # FastAPI quiz server
-│   ├── run_experiment.py      # base eval -> train -> fine-tuned eval -> comparison
-│   ├── aggregate_results.py   # merge per-dataset results into one table
-│   ├── plot_comparison.py     # base-vs-fine-tuned bar chart
-│   ├── colab_train.sh         # one-line GPU training on Colab
-│   └── colab_resume.sh        # resume training from a checkpoint on Colab
-├── src/medicalqa_finetuning/
-│   ├── commands.py            # unified CLI entrypoint
-│   ├── config.py              # dataclasses, logging, device resolver
-│   ├── data.py                # load/format/analyze/prepare datasets
-│   ├── modeling.py            # model/tokenizer/LoRA/generation helpers
-│   ├── train.py               # training flow
-│   ├── evaluate.py            # evaluation + answer extraction
-│   ├── visualize.py           # plotting
-│   └── api.py                 # FastAPI quiz app
-├── experiments/               # results (CSV/JSON/PNG tracked; weights gitignored)
-└── tests/
-```
 
 ## Installation
 
@@ -146,6 +111,22 @@ Gitignored (large / reproducible): model adapter weights
 (`experiments/**/final_adapter/`), checkpoints, prepared datasets, `.venv/`,
 and downloaded base models. Adapters are reproducible via Colab; back them up
 to Google Drive if you want to keep them without retraining (see below).
+
+## Project status — completed
+
+The project was built and finalized through these steps, end to end:
+
+1. **Environment** — Python 3.12 venv with `uv`, all dependencies installed.
+2. **Data preparation** — PubMedQA & MedMCQA loaded and converted to Alpaca format.
+3. **Analysis & visualization** — answer distributions, question lengths, and subject plots.
+4. **Fine-tuning** — LoRA adapters trained on GPU (4-bit QLoRA) for both datasets, with checkpoint resume.
+5. **Evaluation** — base vs fine-tuned accuracy measured on held-out questions.
+6. **Comparison** — combined results table + bar chart showing the improvement.
+7. **Quiz web app** — FastAPI interface serving the fine-tuned models for live Q&A explanations.
+
+**Outcome:** fine-tuning improved PubMedQA from **26% → 64%** and MedMCQA from
+**26% → 32%**, both clearly above their base model and random baselines — the
+quiz now uses these fine-tuned models to help answer and explain medical questions.
 
 ## Tests
 

@@ -1,7 +1,24 @@
 {
-  "generated_at": "2026-06-06T21:10:02",
+  "generated_at": "2026-06-07T17:49:14",
   "model_id": "unsloth/Llama-3.2-1B",
   "datasets": [
+    {
+      "dataset": "medmcqa",
+      "random_baseline_pct": 25.0,
+      "base": {
+        "total": 50,
+        "correct": 13,
+        "accuracy_pct": 26.0
+      },
+      "finetuned": {
+        "total": 50,
+        "correct": 16,
+        "accuracy_pct": 32.0
+      },
+      "improvement_pct": 6.0,
+      "base_eval_csv": "experiments/medmcqa/base_eval.csv",
+      "finetuned_eval_csv": "experiments/medmcqa/finetuned_eval.csv"
+    },
     {
       "dataset": "pubmedqa",
       "random_baseline_pct": 33.3,

@@ -58,12 +58,39 @@ python scripts/run_experiment.py --datasets medmcqa pubmedqa --max-steps 200
 # 4. Regenerate the comparison plot from results
 python scripts/plot_comparison.py
 
-# 5. Serve the quiz with a fine-tuned adapter
+# 5. Serve the quiz (see the Quiz section below)
 python scripts/serve.py --adapter-path experiments/pubmedqa/final_adapter
 ```
 
-Then open **http://127.0.0.1:8000** — pick a task, answer a question, and click
-**Get AI Explanation** to see the fine-tuned model explain the answer.
+## The Quiz (web app)
+
+The quiz is the main way to use the fine-tuned models. Start the server with a
+fine-tuned adapter:
+
+```bash
+# PubMedQA quiz (Yes / No / Maybe)
+python scripts/serve.py --adapter-path experiments/pubmedqa/final_adapter
+
+# MedMCQA quiz (multiple choice A/B/C/D)
+python scripts/serve.py --adapter-path experiments/medmcqa/final_adapter
+```
+
+Wait for `Application startup complete`, then open the website in your browser:
+
+**http://127.0.0.1:8000**
+
+How it works:
+
+1. A medical question loads automatically, pulled straight from the dataset.
+2. You pick your answer — the page instantly shows **correct / wrong** and
+   highlights the right one.
+3. Click **Get AI Explanation** and the **fine-tuned model** explains *why* the
+   correct answer is right (and why the others aren't).
+4. **Next Question** loads a fresh one; switch task with the dropdown.
+
+So you answer questions and the fine-tuned model is right there to help explain
+them — that's the project's payoff: the improvement from fine-tuning shows up as
+cleaner, on-topic answers in the live quiz.
 
 ## ⚠️ Train on GPU, not Apple MPS
 
